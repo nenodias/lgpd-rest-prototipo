@@ -5,7 +5,7 @@ mod db;
 
 use actix_web::{web, App, HttpServer};
 use api_doc::ApiDoc;
-use handlers::{create_pessoa_fisica, echo, hello, manual_hello};
+use handlers::{create_pessoa_fisica, get_pessoa_fisica, echo, index};
 use std::net::Ipv4Addr;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -36,14 +36,14 @@ async fn main() -> std::io::Result<()> {
         App::new()
             // make the pool available to handlers via web::Data<PgPool>
             .app_data(web::Data::new(pool.clone()))
-            .service(hello)
+            .service(index)
             .service(echo)
+            .service(get_pessoa_fisica)
             .service(create_pessoa_fisica)
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
-            .route("/hey", web::get().to(manual_hello))
     })
     .bind((Ipv4Addr::UNSPECIFIED, PORT))?
     .run()

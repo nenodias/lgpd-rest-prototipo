@@ -4,8 +4,6 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
 pub struct Basicos {
-    #[schema(value_type = String)]
-    pub id: Uuid,
     pub nome: String,
     pub email: String,
     pub login: String,
@@ -38,6 +36,7 @@ pub struct Endereco {
     pub bairro: String,
     pub cidade: String,
     pub uf: String,
+    pub cep: String,
     pub pais: String,
 }
 
@@ -48,6 +47,9 @@ pub struct Localizacao {
 
 #[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
 pub struct PessoaFisica {
+    /// Represented as a UUID-formatted string in OpenAPI (docs) while remaining `Uuid` at runtime.
+    #[schema(value_type = String, format = "uuid", example = "550e8400-e29b-41d4-a716-446655440000")]
+    pub id: Uuid,
     pub basicos: Basicos,
     pub comunicacao: Comunicacao,
     pub localizacoes: Vec<Localizacao>,

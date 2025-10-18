@@ -1,22 +1,30 @@
-use crate::models::{
-    Basicos, Comunicacao, CreatePessoaFisicaRequest, Endereco, Localizacao, PessoaFisica,
-    RedesSociais, Telefone,
-};
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        crate::handlers::hello,
+        crate::handlers::index,
         crate::handlers::echo,
-        crate::handlers::manual_hello,
-        crate::handlers::create_pessoa_fisica
+        crate::handlers::create_pessoa_fisica,
+        crate::handlers::get_pessoa_fisica,
     ),
     components(
-        schemas(Basicos, Telefone, RedesSociais, Comunicacao, Endereco, Localizacao, PessoaFisica, CreatePessoaFisicaRequest)
+        schemas(
+            crate::models::Basicos,
+            crate::models::Comunicacao,
+            crate::models::CreatePessoaFisicaRequest,
+            crate::models::PessoaFisica,
+            crate::models::Telefone,
+            crate::models::RedesSociais,
+            crate::models::Endereco,
+            crate::models::Localizacao,
+        )
     ),
     tags(
-        (name = "lgpd", description = "LGPD management endpoints.")
+        (name = "Pessoas", description = "Operações relacionadas a pessoas físicas"),
+        (name = "Utilities", description = "Utilities and helper endpoints"),
+        (name = "Docs", description = "Documentation and UI redirect")
     ),
+    info(title = "LGPD REST Prototype", version = "0.1.0")
 )]
 pub struct ApiDoc;

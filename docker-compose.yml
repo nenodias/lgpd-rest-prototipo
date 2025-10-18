@@ -12,6 +12,9 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:rw
+      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf:rw
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"${POSTGRES_USER:-lgpd_user}\" -d \"${POSTGRES_DB:-lgpd_db}\" -h localhost"]
       interval: 10s
