@@ -1,6 +1,7 @@
 use crate::models::{Basicos, CreatePessoaFisicaRequest, PessoaFisica};
 use actix_web::{HttpResponse, Responder, get, post, web};
 use uuid::Uuid;
+use sqlx::PgPool;
 
 #[utoipa::path(
     get,
@@ -38,6 +39,7 @@ pub async fn echo(req_body: String) -> impl Responder {
 )]
 #[post("/pessoa-fisica")]
 pub async fn create_pessoa_fisica(
+    pool: web::Data<PgPool>,
     pessoa_request: web::Json<CreatePessoaFisicaRequest>,
 ) -> impl Responder {
     // Generate a new UUID for the person
@@ -58,10 +60,25 @@ pub async fn create_pessoa_fisica(
         localizacoes: pessoa_request.localizacoes.clone(),
     };
 
-    // In a real application, you would save this to a database here
-    // For now, we'll just return the created person
-
-    HttpResponse::Created().json(pessoa_fisica)
+    // persist as jsonb in table `pessoas`
+    match serde_json::to_value(&pessoa_fisica) {
+        Ok(json_value) => {
+            let res = sqlx::query("INSERT INTO pessoas (id, data) VALUES ($1, $2)")
+                .bind(id)
+                .bind(json_value)
+                .execute(pool.get_ref())
+                .await;
+            if let Err(e) = res {
+                eprintln!("DB insert error: {:?}", e);
+                return HttpResponse::InternalServerError().body("Failed to save to DB");
+            }
+            HttpResponse::Created().json(pessoa_fisica)
+        }
+        Err(e) => {
+            eprintln!("Serialization error: {:?}", e);
+            HttpResponse::InternalServerError().body("Serialization error")
+        }
+    }
 }
 
 #[utoipa::path(

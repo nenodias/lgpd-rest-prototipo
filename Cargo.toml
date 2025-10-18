@@ -9,5 +9,8 @@ utoipa = { version = "5.4.0", features = ["actix_extras"] }
 utoipa-swagger-ui = { version = "9", features = ["actix-web"] }
 utoipa-actix-web = "0.1.2"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 uuid = { version = "1.0", features = ["v4", "serde"] }
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-native-tls", "uuid", "macros"] }
+dotenvy = "0.15"
 
