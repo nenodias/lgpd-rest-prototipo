@@ -1,36 +1,28 @@
-from datetime import datetime
-import uuid
-from sqlalchemy import (
-    Column,
-    String,
-    DateTime,
-    ForeignKey,
-    Text,
-    func,
-    text,
-    Index,
-)
-from sqlalchemy.dialects.postgresql import UUID, JSONB, TIMESTAMP
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+import os
+from pymongo import AsyncMongoClient
 
-Base = declarative_base()
+async def get_database() -> AsyncMongoClient:
+    try:
+        host = os.getenv("MONGO_HOST", "localhost")
+        port = os.getenv("MONGO_PORT", "27017")
+        user = os.getenv("MONGO_INITDB_ROOT_USERNAME")
+        password = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
+        db_name = os.getenv("MONGO_INITDB_DATABASE", "lgpd_db")
 
-# JSONB-backed table matching migration: pessoas(id UUID PK, data JSONB, created_at)
-class PessoaJSON(Base):
-    __tablename__ = "pessoas"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    data = Column(JSONB, nullable=False)  # stores full PessoaFisica JSON
-    created_at = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
-    )
+        if user and password:
+            uri = f"mongodb://{user}:{password}@{host}:{port}/?authSource=admin"
+        else:
+            uri = f"mongodb://{host}:{port}/"
+        client = AsyncMongoClient(uri)
+        return client
+    except Exception as e:
+        print(f"Error connecting to database: {e}")
+        return None
 
-    def __repr__(self):
-        return f"<PessoaJSON id={self.id} created_at={self.created_at}>"
+async def close_database(client: AsyncMongoClient):
+    try:
+        await client.close()
+    except Exception as e:
+        print(f"Error closing database connection: {e}")
 
-# Optionally: helper to create tables (sync) for quick local dev
-def create_all(engine):
-    """
-    Create all tables in DB. For async setups, use metadata.create_all in a sync engine or use Alembic for production.
-    """
-    Base.metadata.create_all(bind=engine)
+        

@@ -1,28 +1,17 @@
 version: "3.8"
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: lgpd-postgres
+
+  mongodb:
+    image: mongo:6.0
+    container_name: lgpd-mongodb
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-lgpd_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lgpd_password}
-      POSTGRES_DB: ${POSTGRES_DB:-lgpd_db}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-lgpd_db}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${MONGO_PORT:-27017}:27017"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./postgresql.conf:/etc/postgresql/postgresql.conf:rw
-      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf:rw
-    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"${POSTGRES_USER:-lgpd_user}\" -d \"${POSTGRES_DB:-lgpd_db}\" -h localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
+      - mongodata:/data/db
 
 volumes:
-  pgdata:
-    name: lgpd_pgdata
+  mongodata:
+    name: lgpd_mongo_data

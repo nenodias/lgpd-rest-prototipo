@@ -1,8 +1,0 @@
--- ...existing code...
-CREATE TABLE IF NOT EXISTS pessoas (
-  id UUID PRIMARY KEY,
-  data JSONB NOT NULL,
-  password varchar(100) NOT NULL,
-  salt varchar(100) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);

@@ -1,8 +1,33 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
+from contextlib import asynccontextmanager
+from auth import AuthMiddleware
+
+import db
 import models
+import endpoints
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.db = await db.get_database()
+    yield
+    await db.close_database(app.state.db)
 
-app = FastAPI()
+app = FastAPI(
+    title="LGPD-REST-PROTOTIPO",
+    description="",
+    summary="API para gerenciamento de permissões conforme a LGPD",
+    version="0.0.1",
+    contact={
+        "name": "Horácio Dias Baptista Neto",
+        "url": "https://linkedin.com/in/nenodias",
+        "email": "horacio.dias@yahoo.com",
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+    lifespan=lifespan,
+)
 
 
 @app.post("/pessoa_fisica/")
@@ -15,35 +40,13 @@ async def criar_pessoa_juridica(pessoa: models.PessoaJuridica):
 
 @app.post("/login/")
 async def login(login: str, senha: str):
-    # Implement login logic here
     return {"message": "Login successful"}
 
 
-@app.post("/perfil_pj/permissao/")
-async def criar_permissao(id_pessoa:str, permissao: models.Permissao):
-    print(f"Criando permissao para pessoa {id_pessoa}")
-    return permissao
+app.add_middleware(AuthMiddleware, routes=["/perfil_pj/**", "/perfil_pf/**"])
 
-@app.get("/perfil_pj/pessoa_fisica")
-async def listar_pessoas_fisicas():
-    return [models.PessoaFisica()]
-
-@app.get("/perfil_pj/pessoa_fisica/{id_pessoa}")
-async def listar_pessoa_fisica(id_pessoa:str):
-    return models.PessoaFisica()
-
-
-
-@app.get("/perfil_pf/permissao/")
-async def listar_permissoes():
-    return [models.Permissao()]
-
-@app.get("/perfil_pf/permissao/{id_permissao}")
-async def listar_permissao(id_permissao:str):
-    return models.Permissao()
-
-@app.post("/perfil_pf/permissao/")
-async def aprovar_permissao(id_pessoa:str, permissao: models.Permissao):
-    print(f"Aprovando permissao para pessoa {id_pessoa}")
-    return permissao
-
+app.include_router(endpoints.pj_router)
+app.include_router(endpoints.pf_router)
+for router in [endpoints.pj_router, endpoints.pf_router]:
+    if hasattr(router, "set_app"):
+        router.set_app(app)
