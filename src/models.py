@@ -87,7 +87,7 @@ class Localizacao(LGPDBaseModel):
 
 
 class PessoaFisica(LGPDBaseModel):
-    id: PydanticObjectId = Field(alias='_id')
+    id: PydanticObjectId = Field(alias='_id', serialization_alias='id')
     basicos: Basicos
     informacoes_sensiveis: InformacoesSensiveis
     comunicacao: Optional[Comunicacao] = None
@@ -97,7 +97,7 @@ class PessoaFisica(LGPDBaseModel):
 
 
 class PessoaJuridica(LGPDBaseModel):
-    id: PydanticObjectId = Field(alias='_id')
+    id: PydanticObjectId = Field(alias='_id', serialization_alias='id')
 
     nome_fantasia: str
     cnpj: str
@@ -112,9 +112,9 @@ class PessoaJuridica(LGPDBaseModel):
 
 
 class Permissao(LGPDBaseModel):
-    id: PydanticObjectId = Field(alias='_id')
-    id_pessoa: uuid.UUID = Field(default_factory=uuid.uuid4)
-    id_pessoa_juridica: uuid.UUID = Field(default_factory=uuid.uuid4)
+    id: PydanticObjectId = Field(alias='_id', serialization_alias='id')
+    id_pessoa: PydanticObjectId
+    id_pessoa_juridica: PydanticObjectId
 
     dados_basicos: bool = False
     dados_sensiveis: bool = False
