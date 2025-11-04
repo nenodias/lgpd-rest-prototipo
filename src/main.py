@@ -1,6 +1,7 @@
 import os, bcrypt
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from bson.objectid import ObjectId as BsonObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 from contextlib import asynccontextmanager
 from auth import AuthMiddleware
@@ -50,9 +51,11 @@ async def criar_pessoa(pessoa: models.CriarPessoaFisica):
     pessoa.senha = hashed.decode('utf-8')
     pessoa.confirmacao_senha = hashed.decode('utf-8')
     db: AsyncDatabase = app.state.db
-    # TODO: Validar se cpf ja existe
-    dados = pessoa.model_dump()
-    print(dados)
+    dados = pessoa.model_dump(exclude={"id", "confirmacao_senha"})
+    
+    res = await db["pessoas_fisicas"].find({"informacoes_sensiveis.cpf": pessoa.informacoes_sensiveis.cpf}).to_list(1)
+    if len(res) > 0:
+        return JSONResponse({"message": "CPF já cadastrado"}, status_code=400)
     res = await db["pessoas_fisicas"].insert_one(dados)
     res = await db["pessoas_fisicas"].find_one({"_id":res.inserted_id})
     return limpar_senha_e_salt(models.CriarPessoaFisica(**res))
@@ -68,14 +71,13 @@ async def criar_pessoa_juridica(pessoa: models.CriarPessoaJuridica):
     pessoa.confirmacao_senha = hashed.decode('utf-8')
 
     db: AsyncDatabase = app.state.db
-    # TODO: Validar se cnpj ja existe
-    res = await db["pessoas_juridicas"].insert_one(pessoa.model_dump())
+    res = await db["pessoas_juridicas"].find({"cnpj": pessoa.cnpj}).to_list(1)
+    if len(res) > 0:
+        return JSONResponse({"message": "CNPJ já cadastrado"}, status_code=400)
+    dados = pessoa.model_dump(exclude={"id", "confirmacao_senha"})
+    res = await db["pessoas_juridicas"].insert_one(dados)
     res = await db["pessoas_juridicas"].find_one({"_id":res.inserted_id})
     return limpar_senha_e_salt(models.CriarPessoaJuridica(**res))
-
-@app.post("/login/")
-async def login(login: str, senha: str):
-    return {"message": "Login successful"}
 
 
 app.add_middleware(AuthMiddleware, routes=["/perfil_pj/**", "/perfil_pf/**"])

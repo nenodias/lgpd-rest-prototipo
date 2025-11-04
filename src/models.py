@@ -1,6 +1,6 @@
 import uuid
 from bson.objectid import ObjectId as BsonObjectId
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field
 from typing import Any, Optional, List, Dict
 
 
@@ -50,18 +50,11 @@ class PydanticObjectId(BsonObjectId):
 
 # Common base model to include json encoders for ObjectId (Pydantic v2)
 class LGPDBaseModel(BaseModel):
+    id:Optional[PydanticObjectId] = Field(alias="_id", default_factory=lambda: BsonObjectId())
     
-    @computed_field()
-    def id(self) -> str:
-        if hasattr(self, "_id"):
-            return str(self._id)
-        else:
-            return ""
-    
-    model_config = {
-        "arbitrary_types_allowed": True,
-        "json_encoders": {BsonObjectId: lambda v: str(v)},
-    }
+    class Config:
+        arbitrary_types_allowed = True
+        json_encoders = { BsonObjectId: str}
 
 
 class Basicos(BaseModel):
@@ -123,7 +116,7 @@ class CriarPessoaFisica(LGPDBaseModel):
     localizacao: Optional[Localizacao] = None
     
     senha: str
-    confirmacao_senha: str
+    confirmacao_senha: Optional[str] = None
     salt: Optional[str] = None
 
 class PessoaJuridica(LGPDBaseModel):
@@ -147,7 +140,7 @@ class CriarPessoaJuridica(LGPDBaseModel):
     localizacao: Optional[Localizacao] = None
 
     senha: str
-    confirmacao_senha: str
+    confirmacao_senha: Optional[str] = None
     salt: Optional[str] = None
 
 
