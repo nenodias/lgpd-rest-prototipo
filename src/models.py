@@ -56,7 +56,7 @@ class LGPDBaseModel(BaseModel):
         if hasattr(self, "_id"):
             return str(self._id)
         else:
-            return str(BsonObjectId())
+            return ""
     
     model_config = {
         "arbitrary_types_allowed": True,
