@@ -10,15 +10,16 @@ def set_app(app: FastAPI):
 pf_router.set_app = set_app
 
 @pf_router.get("/permissao/")
-async def listar_permissoes():
+async def listar_permissoes(limit: int = 10, skip: int = 0):
     app: FastAPI = pf_router.context_app
     db: AsyncMongoClient = app.state.db
     
     data = db.get_database("lgpd_db")
-    res = await data.list_collections()
-    res = await res.to_list(length=100)
-    print(f"DB State: {res}")
-    return [models.Permissao()]
+    res = await data["permissoes"].find().skip(skip).limit(limit).to_list(length=limit)
+    if not res:
+        return []
+    else:
+        return [models.Permissao(**item) for item in res]
 
 @pf_router.get("/permissao/{id_permissao}")
 async def listar_permissao(id_permissao:str):
