@@ -41,6 +41,9 @@ class AuthMiddleware:
                     registro = await db["pessoas_fisicas"].find_one({"_id":BsonObjectId(dados["id"])})
                 elif scope["path"].startswith("/perfil_pj"):
                     registro = await db["pessoas_juridicas"].find_one({"_id":BsonObjectId(dados["id"])})
+                
+                if not registro:
+                    return False
                 scope["current_user"] = registro
         except Exception as e:
             print(e)

@@ -23,35 +23,39 @@ async def listar_permissoes(request: Request, limit: int = 10, skip: int = 0) ->
         else:
             return [models.Permissao(**item) for item in res]
     except Exception as e:
+        print(e)
         return []
 
 @pf_router.get("/permissao/{id_permissao}", response_model=models.Permissao | None)
-async def listar_permissao(id_permissao:str) -> models.Permissao | None:
+async def listar_permissao(id_permissao:str, request: Request) -> models.Permissao | None:
     app: FastAPI = pf_router.context_app
     db: AsyncDatabase = app.state.db
+    identity = request.scope.get("current_user")["_id"]
     try:
-        res = await db["permissoes"].find_one({"_id":BsonObjectId(id_permissao)})
+        res = await db["permissoes"].find_one({"_id":BsonObjectId(id_permissao),"id_pessoa":identity})
         if not res:
             return None
         else:
             return models.Permissao(**res)
     except Exception as e:
+        print(e)
         return None
 
-@pf_router.post("/permissao/", response_model=models.Permissao)
-async def aprovar_permissao(id:str) -> models.Permissao:
+@pf_router.post("/permissao/{id}", response_model=models.Permissao)
+async def aprovar_permissao(id:str, request: Request) -> models.Permissao:
     app: FastAPI = pf_router.context_app
     db: AsyncDatabase = app.state.db
+    identity = request.scope.get("current_user")["_id"]
     try:
         bid = BsonObjectId(id)
-        # TODO: Validar se usuario logado tem permissao para aprovar
-        res = await db["permissoes"].find_one({"_id":bid})
+        res = await db["permissoes"].find_one({"_id":bid,"id_pessoa":identity})
         if not res:
             return JSONResponse({"message": "Error approving permission"}, status_code=400)
         else:
-            db["permissoes"].update_one({"_id":bid}, {"$set":{"aprovada":True}})
+            await db["permissoes"].update_one({"_id":bid}, {"$set":{"aprovada":True}})
             res = await db["permissoes"].find_one({"_id":bid})
             return models.Permissao(**res)
     except Exception as e:
+        print(e)
         return JSONResponse({"message": "Error approving permission"}, status_code=500)
 

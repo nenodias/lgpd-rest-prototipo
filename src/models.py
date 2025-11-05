@@ -145,8 +145,8 @@ class CriarPessoaJuridica(LGPDBaseModel):
 
 
 class Permissao(LGPDBaseModel):
-    id_pessoa: PydanticObjectId
-    id_pessoa_juridica: PydanticObjectId
+    id_pessoa: Optional[PydanticObjectId]
+    id_pessoa_juridica: Optional[PydanticObjectId]
 
     dados_basicos: bool = False
     dados_sensiveis: bool = False
