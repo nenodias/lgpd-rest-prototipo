@@ -1,4 +1,3 @@
-import bcrypt, jwt
 from bson.objectid import ObjectId as BsonObjectId
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import JSONResponse
@@ -55,20 +54,3 @@ async def aprovar_permissao(id:str) -> models.Permissao:
     except Exception as e:
         return JSONResponse({"message": "Error approving permission"}, status_code=500)
 
-@pf_router.post("/login/")
-async def login(login: str, senha: str):
-    app: FastAPI = pf_router.context_app
-    db: AsyncDatabase = app.state.db
-    try:
-        registro = await db["pessoas_fisicas"].find_one({"basicos.login":login})
-        if not registro:
-            return JSONResponse({"message": "Invalid login or password"}, status_code=401)
-        pessoa = models.PessoaFisica(**registro)
-        salt = pessoa.salt.encode('utf-8')
-        hashed = bcrypt.hashpw(senha.encode('utf-8'), salt=salt)
-        if hashed.decode('utf-8') != pessoa.senha:
-            return JSONResponse({"message": "Invalid login or password"}, status_code=401)  
-        encoded_jwt = jwt.encode({"id": pessoa._id}, "secret", algorithm="HS256")
-        return {"message": "Login successful"}
-    except Exception as e:
-        return JSONResponse({"message": "Error approving permission"}, status_code=500)

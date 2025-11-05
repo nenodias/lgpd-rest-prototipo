@@ -1,4 +1,4 @@
-import os, bcrypt
+import os, bcrypt, jwt
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from bson.objectid import ObjectId as BsonObjectId
@@ -80,10 +80,46 @@ async def criar_pessoa_juridica(pessoa: models.CriarPessoaJuridica):
     return limpar_senha_e_salt(models.CriarPessoaJuridica(**res))
 
 
+@app.post("/login-pf/")
+async def login(login: str, senha: str):
+    db: AsyncDatabase = app.state.db
+    try:
+        registro = await db["pessoas_fisicas"].find_one({"basicos.login":login})
+        if not registro:
+            return JSONResponse({"message": "Invalid login or password"}, status_code=401)
+        salt = registro["salt"].encode('utf-8')
+        hashed = bcrypt.hashpw(senha.encode('utf-8'), salt=salt)
+        if hashed.decode('utf-8') != registro["senha"]:
+            return JSONResponse({"message": "Invalid login or password"}, status_code=401)  
+        encoded_jwt = jwt.encode({"id": str(registro["_id"])}, "secret", algorithm="HS256")
+        return {"message": "Login successful", "token": encoded_jwt}
+    except Exception as e:
+        print(e)
+        return JSONResponse({"message": "Error approving permission"}, status_code=500)
+
+
+@app.post("/login-pj/")
+async def login(login: str, senha: str):
+    db: AsyncDatabase = app.state.db
+    try:
+        registro = await db["pessoas_juridicas"].find_one({"basicos.login":login})
+        if not registro:
+            return JSONResponse({"message": "Invalid login or password"}, status_code=401)
+        salt = registro["salt"].encode('utf-8')
+        hashed = bcrypt.hashpw(senha.encode('utf-8'), salt=salt)
+        if hashed.decode('utf-8') != registro["senha"]:
+            return JSONResponse({"message": "Invalid login or password"}, status_code=401)  
+        encoded_jwt = jwt.encode({"id": str(registro["_id"])}, "secret", algorithm="HS256")
+        return {"message": "Login successful", "token": encoded_jwt}
+    except Exception as e:
+        print(e)
+        return JSONResponse({"message": "Error approving permission"}, status_code=500)
+
 app.add_middleware(AuthMiddleware, routes=["/perfil_pj/**", "/perfil_pf/**"])
 
 app.include_router(endpoints.pj_router)
 app.include_router(endpoints.pf_router)
+
 for router in [endpoints.pj_router, endpoints.pf_router]:
     if hasattr(router, "set_app"):
         router.set_app(app)
