@@ -1,5 +1,5 @@
 from bson.objectid import ObjectId as BsonObjectId
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 from pymongo.asynchronous.database import AsyncDatabase
 import models
@@ -12,11 +12,12 @@ def set_app(app: FastAPI):
 pf_router.set_app = set_app
 
 @pf_router.get("/permissao/", response_model=list[models.Permissao])
-async def listar_permissoes(limit: int = 10, skip: int = 0) -> list[models.Permissao]:
+async def listar_permissoes(request: Request, limit: int = 10, skip: int = 0) -> list[models.Permissao]:
     app: FastAPI = pf_router.context_app
     db: AsyncDatabase = app.state.db
+    identity = request.scope.get("current_user")["_id"]
     try:
-        res = await db["permissoes"].find().skip(skip).limit(limit).to_list(length=limit)
+        res = await db["permissoes"].find({"id_pessoa":identity}).skip(skip).limit(limit).to_list(length=limit)
         if not res:
             return []
         else:

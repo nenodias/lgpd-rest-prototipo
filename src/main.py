@@ -91,7 +91,7 @@ async def login(login: str, senha: str):
         hashed = bcrypt.hashpw(senha.encode('utf-8'), salt=salt)
         if hashed.decode('utf-8') != registro["senha"]:
             return JSONResponse({"message": "Invalid login or password"}, status_code=401)  
-        encoded_jwt = jwt.encode({"id": str(registro["_id"])}, "secret", algorithm="HS256")
+        encoded_jwt = jwt.encode({"id": str(registro["_id"])}, os.getenv("APP_SECRET_KEY", "secret"), algorithm="HS256")
         return {"message": "Login successful", "token": encoded_jwt}
     except Exception as e:
         print(e)
@@ -109,13 +109,13 @@ async def login(login: str, senha: str):
         hashed = bcrypt.hashpw(senha.encode('utf-8'), salt=salt)
         if hashed.decode('utf-8') != registro["senha"]:
             return JSONResponse({"message": "Invalid login or password"}, status_code=401)  
-        encoded_jwt = jwt.encode({"id": str(registro["_id"])}, "secret", algorithm="HS256")
+        encoded_jwt = jwt.encode({"id": str(registro["_id"])}, os.getenv("APP_SECRET_KEY", "secret"), algorithm="HS256")
         return {"message": "Login successful", "token": encoded_jwt}
     except Exception as e:
         print(e)
         return JSONResponse({"message": "Error approving permission"}, status_code=500)
 
-app.add_middleware(AuthMiddleware, routes=["/perfil_pj/**", "/perfil_pf/**"])
+app.add_middleware(AuthMiddleware, routes=["/perfil_pj/**", "/perfil_pf/**"], aplicacao=app)
 
 app.include_router(endpoints.pj_router)
 app.include_router(endpoints.pf_router)
