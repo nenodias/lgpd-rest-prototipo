@@ -1,176 +1,141 @@
 # LGPD REST API Prototype
 
-This is a Rust REST API prototype for managing personal data in compliance with LGPD (Lei Geral de Proteção de Dados). The project uses actix-web, sqlx for DB access and utoipa + utoipa-swagger-ui for OpenAPI/Swagger documentation.
+Async REST API prototype for managing personal data in compliance with LGPD (Lei Geral de Proteção de Dados).  
+Current implementation uses FastAPI, Motor (async MongoDB driver), Pydantic v2 for models, and an authentication middleware. Service is container-friendly via Docker Compose.
 
 ## Features
 
-- POST endpoint for creating `PessoaFisica` records
-- JSONB persistence for flexible payloads
-- Swagger UI documentation (served at `/swagger-ui/`)
-- DB migrations using `sqlx-cli`
-- Environment-driven configuration (dotenvy)
+- FastAPI async endpoints for Pessoa Fisica / Pessoa Juridica
+- MongoDB persistence (JSON-like documents)
+- Pydantic v2 models with custom ObjectId support
+- Automatic OpenAPI docs (Swagger UI at `/docs`, ReDoc at `/redoc`)
+- Middleware-based auth example
+- Docker Compose service for MongoDB
 
 ## Requirements
 
-- Rust (stable)
-- Docker & Docker Compose (for local Postgres)
-- `sqlx-cli` (for migrations) — see installation below
+- Python 3.11+ (or supported 3.10)
+- Docker & Docker Compose (to run MongoDB)
+- Recommended: virtualenv / venv
 
-## Database (local with docker-compose)
+## Repository layout (important files)
+- src/main.py — FastAPI application and startup/shutdown hooks
+- src/db.py — Motor connection helpers
+- src/models.py — Pydantic v2 models (custom ObjectId type)
+- src/endpoints/… — routers for pf/pj endpoints
+- docker-compose.yml — MongoDB service for local development
+- requirements.txt — Python dependencies (if present)
 
-A `docker-compose.yml` is included to run Postgres locally. It maps the container port to the host so your app and `sqlx-cli` can connect.
+## Docker (MongoDB)
 
-Start the DB:
+Start MongoDB via Docker Compose:
+
 ```bash
-docker compose up -d postgres
+docker compose up -d mongodb
 ```
 
-Default env values used by docker-compose (can be overridden in `.env`):
-- POSTGRES_USER: `lgpd_user`
-- POSTGRES_PASSWORD: `lgpd_password`
-- POSTGRES_DB: `lgpd_db`
-- POSTGRES_PORT: `5432`
+Default envs used by compose (can be overridden in `.env`):
+- MONGO_INITDB_ROOT_USERNAME: `lgpd_user`
+- MONGO_INITDB_ROOT_PASSWORD: `lgpd_password`
+- MONGO_INITDB_DATABASE: `lgpd_db`
+- MONGO_PORT: `27017`
 
-Connect from host:
-```bash
-psql "postgres://lgpd_user:lgpd_password@127.0.0.1:5432/lgpd_db"
-```
+When running the FastAPI app in the host (outside Docker), use `MONGO_HOST=127.0.0.1`. When running the app in another container in the same compose network, use `MONGO_HOST=mongodb`.
 
-## Environment / DATABASE_URL
+## Environment variables / .env
 
-Create a `.env` in the project root (used by dotenvy/sqlx tooling):
+Create a `.env` in the project root for local development:
 
 ```env
-DATABASE_URL=postgres://lgpd_user:lgpd_password@127.0.0.1:5432/lgpd_db
-RUST_LOG=info
-SERVER_ADDR=0.0.0.0:8989
+MONGO_HOST=mongodb
+MONGO_PORT=27017
+MONGO_INITDB_ROOT_USERNAME=lgpd_user
+MONGO_INITDB_ROOT_PASSWORD=lgpd_password
+MONGO_INITDB_DATABASE=lgpd_db
+
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8989
 ```
 
-The `DATABASE_URL` must be set for `sqlx-cli` and the running app.
+Notes:
+- Use `127.0.0.1` for `MONGO_HOST` when connecting from host to container port-mapped to localhost.
+- Never commit secrets; keep `.env` out of VCS.
 
-## sqlx / sqlx-cli (migrations)
+## Installation (Python)
 
-Install `sqlx-cli` (pick TLS backend matching your build; example uses `rustls`):
-
-Option A (rustls):
-```bash
-cargo install sqlx-cli --no-default-features --features postgres,rustls
-```
-
-Option B (native-tls):
-```bash
-cargo install sqlx-cli --no-default-features --features postgres,native-tls
-```
-
-Verify installation:
-```bash
-sqlx --version
-```
-
-Create and run migrations:
-
-1. Create migrations directory (sqlx will create it on first `migrate add`):
-```bash
-sqlx migrate add init_create_pessoas_table
-```
-
-2. Example migration SQL (place in the generated up.sql):
-```sql
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-CREATE TABLE IF NOT EXISTS pessoas (
-  id uuid PRIMARY KEY,
-  data jsonb NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-```
-
-3. Run migrations:
-```bash
-export DATABASE_URL=postgres://lgpd_user:lgpd_password@127.0.0.1:5432/lgpd_db
-sqlx migrate run
-```
-
-You can also create the DB (if needed) using:
-```bash
-sqlx database create
-```
-
-## Example migration file contents
-
-// migrations/<timestamp>_init_create_pessoas_table/up.sql
-```sql
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-CREATE TABLE IF NOT EXISTS pessoas (
-  id uuid PRIMARY KEY,
-  data jsonb NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-```
-
-// migrations/<timestamp>_init_create_pessoas_table/down.sql
-```sql
-DROP TABLE IF EXISTS pessoas;
-```
-
-## Running the server
-
-1. Ensure the DB is running and migrations have been applied.
-2. Export the DATABASE_URL or ensure `.env` is present.
-3. Run:
-```bash
-cargo run
-```
-
-By default the server exposes the API and Swagger UI. Example base URL (project README used previously):
-- Server: http://localhost:8989
-- Swagger UI: http://localhost:8989/swagger-ui/
-
-(If your main binds to a different port, use that port.)
-
-## API documentation (Swagger)
-
-Open the Swagger UI at:
-```
-http://localhost:8989/swagger-ui/
-```
-The root endpoint `/` redirects to the Swagger UI.
-
-## Endpoints
-
-- POST /pessoa-fisica — create a new PessoaFisica (returns 201 with saved object)
-- POST /echo — utility that echoes the provided body
-
-See Swagger UI for request/response schemas.
-
-## Testing
-
-Use the provided `example_request.json` to test the POST endpoint:
+Create and activate a virtual environment, then install dependencies:
 
 ```bash
-curl -X POST http://localhost:8989/pessoa-fisica \
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+requirements.txt should include at least:
+- fastapi
+- uvicorn[standard]
+- motor
+- pydantic
+- python-dotenv
+- pymongo (optional for some utilities)
+
+## Running locally
+
+1. Ensure MongoDB is running (docker compose up -d mongodb)
+2. Ensure `.env` has correct values (or export env vars)
+3. Start the FastAPI app:
+
+```bash
+uvicorn src.main:app --host 0.0.0.0 --port 8989 --reload
+```
+
+Open:
+- Swagger UI: http://localhost:8989/docs
+- ReDoc: http://localhost:8989/redoc
+
+## API Endpoints (examples)
+
+- POST /pessoa_fisica/ — create a PessoaFisica
+- GET /pessoa_fisica/{id} — retrieve a PessoaFisica by ObjectId
+- POST /pessoa_juridica/ — create a PessoaJuridica
+- Other routers under `src/endpoints/` (pf_router, pj_router)
+
+Example: create a PessoaFisica (replace fields with your model shape):
+
+```bash
+curl -X POST "http://localhost:8989/pessoa_fisica/" \
   -H "Content-Type: application/json" \
-  -d @example_request.json
+  -d '{"basicos": {"name":"Joao","email":"joao@example.com","login":"joao"}, "informacoes_sensiveis": {"cpf":"12345678900"}}'
 ```
 
-## Notes & troubleshooting
+Example: retrieve by id (use returned `_id` from insert):
 
-- Ensure `DATABASE_URL` matches the database credentials and host/port you use (use `127.0.0.1` not `localhost` when connecting from some hosts).
-- If `sqlx migrate run` errors about the database connection, confirm Postgres is listening on the mapped port and that `pg_hba.conf` allows host connections.
-- For production, restrict `pg_hba.conf` and firewall to limit allowed host IPs; never use `0.0.0.0/0` in production.
-- Keep secrets out of source control — use environment variables or a secrets manager.
+```bash
+curl "http://localhost:8989/pessoa_fisica/650b9c8f2f9b5a1b2c3d4e5f"
+```
 
-## Dependencies
+## Models & ObjectId handling
 
-- actix-web: HTTP server
-- utoipa + utoipa-swagger-ui: OpenAPI documentation and UI
-- sqlx: async DB access
-- sqlx-cli: migrations (development)
-- serde / serde_json: serialization
-- uuid: UUID generation
-- dotenvy: load .env files
+- Models use a custom `PydanticObjectId` type (wrapping `bson.ObjectId`) that:
+  - Accepts both ObjectId instances and valid hex strings.
+  - Serializes to string in JSON responses.
+  - Provides a JSON schema representation compatible with Pydantic v2.
+- When storing documents in MongoDB, `_id` is used; models typically expose `_id` aliased to `id` or serialize ObjectId to string.
+
+## Troubleshooting
+
+- Connection errors: check `MONGO_HOST` and `MONGO_PORT`. If Mongo runs in Docker and your app runs on host, use `127.0.0.1` and ensure port mapping exists.
+- Auth errors: ensure `MONGO_INITDB_ROOT_USERNAME` and `MONGO_INITDB_ROOT_PASSWORD` match what was used when the DB was initialized.
+- Pydantic schema errors: ensure code uses Pydantic v2-compatible hooks (`__get_pydantic_json_schema__`) and validators accept extra args.
+- Logs: run uvicorn without `--daemon` to see stdout/stderr for startup and handler prints.
+
+## Development notes
+
+- Routers should obtain the DB via FastAPI dependency (e.g., `db: AsyncIOMotorDatabase = Depends(get_db)`), where `get_db` returns `request.app.state.db`.
+- App startup connects a single `AsyncIOMotorClient` and stores `app.state.db` and `app.state.mongo_client`.
+- Close the client at shutdown to clean up connections.
 
 ## License / Disclaimer
 
-This is a prototype for learning and demonstration. Treat the DB/schema and security settings accordingly before using in production.
+Prototype for learning and demonstration. Review security, validation, and data retention policies before any production use.
